@@ -1,0 +1,10 @@
+metric,value,status
+train_accuracy,,NOT_YET_EVALUATED
+validation_accuracy,,NOT_YET_EVALUATED
+test_accuracy,,NOT_YET_EVALUATED
+precision,,NOT_YET_EVALUATED
+recall,,NOT_YET_EVALUATED
+f1_score,,NOT_YET_EVALUATED
+num_training_images,,NOT_YET_EVALUATED
+num_validation_images,,NOT_YET_EVALUATED
+num_test_images,,NOT_YET_EVALUATED
