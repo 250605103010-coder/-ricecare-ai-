@@ -5,9 +5,7 @@ Run with:  streamlit run app.py
 """
 
 import styling
-from Model_performance
-import is_demo_mode
-
+from model_untils import is_demo_mode
 st.set_page_config(
     page_title="RiceCare AI — Home",
     page_icon="🌾",
