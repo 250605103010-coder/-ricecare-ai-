@@ -47,6 +47,7 @@ with col2:
 
 st.markdown("<br/>", unsafe_allow_html=True)
 
+
 # ---------------- HIGHLIGHTS ----------------
 st.markdown("### Project Highlights")
 h1, h2, h3, h4 = st.columns(4)
