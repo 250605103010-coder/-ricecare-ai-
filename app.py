@@ -53,34 +53,42 @@ h1, h2, h3, h4 = st.columns(4)
 
 with h1:
     st.markdown(
-        """<div class="rc-card">
-        <h4>🌱 4 Rice Classes</h4>
-        <p>Healthy · Rice Blast · Brown Spot · Bacterial Leaf Blight</p>
-        </div>""",
+        """
+            <div class="rc-card">
+               <h4>🌱 4 Rice Classes</h4>
+               <p>Healthy · Rice Blast · Brown Spot · Bacterial Leaf Blight</p>
+             </div>
+""",
         unsafe_allow_html=True,
     )
 with h2:
     st.markdown(
-        """<div class="rc-card">
-        <h4>🤖 AI Detection</h4>
-        <p>Image-based classification of rice leaf conditions</p>
-        </div>""",
+        """
+            <div class="rc-card">
+              <h4>🤖 AI Detection</h4>
+              <p>Image-based classification of rice leaf conditions</p>
+            </div>
+""",
         unsafe_allow_html=True,
     )
 with h3:
     st.markdown(
-        """<div class="rc-card">
-        <h4>🧬 Protein Research</h4>
-        <p>Rice defense &amp; stress-response proteins</p>
-        </div>""",
+        """
+             <div class="rc-card">
+                <h4>🧬 Protein Research</h4>
+                <p>Rice defense &amp; stress-response proteins</p>
+             </div>
+""",
         unsafe_allow_html=True,
     )
 with h4:
     st.markdown(
-        """<div class="rc-card">
-        <h4>🔬 Bioinformatics</h4>
-        <p>BLAST · MSA · InterPro domain analysis</p>
-        </div>""",
+        """
+             <div class="rc-card">
+                <h4>🔬 Bioinformatics</h4>
+                 <p>BLAST · MSA · InterPro domain analysis</p>
+             </div>
+""",
         unsafe_allow_html=True,
     )
 
