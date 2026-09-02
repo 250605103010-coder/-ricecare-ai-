@@ -40,10 +40,10 @@ col1, col2, col3 = st.columns([1, 1, 1])
 with col2:
     a, b = st.columns(2)
     with a:
-        if st.button("📷 Analyze My Plant", use_container_width=True,)
+        if st.button("📷 Analyze My Plant", use_container_width=True,):
             st.switch_page("pages/1_Analyze_My_Plant.py")
     with b:
-        if st.button("🔬 Explore Rice Research", use_container_width=True,)
+        if st.button("🔬 Explore Rice Research", use_container_width=True,):
             st.switch_page("pages/2_Explore_Rice_Diseases.py")
 
 st.markdown("<br/>", unsafe_allow_html=True)
