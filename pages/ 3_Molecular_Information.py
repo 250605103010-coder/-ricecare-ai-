@@ -65,7 +65,7 @@ else:
             )
             if st.button("View Analysis", key=f"view_{protein.get('protein_id')}"):
                 st.session_state["rc_selected_protein_id"] = protein.get("protein_id")
-                st.switch_page("pages/3_Protein_Detail.py")
+                st.switch_page("pages/4_Protein_Detail.py")
 
 styling.disclaimer()
 styling.footer()
