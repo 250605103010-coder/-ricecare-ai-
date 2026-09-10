@@ -1,4 +1,3 @@
-```python
 import streamlit as st
 from utils import styling, data_loader
 from urllib.request import urlopen
