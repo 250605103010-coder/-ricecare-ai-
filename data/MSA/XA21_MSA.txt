@@ -1,0 +1,135 @@
+======================================================================
+XA21 MULTIPLE SEQUENCE ALIGNMENT
+================================
+
+Protein Name        : XA21
+Project Protein ID  : PROT_XA21
+Protein Category    : Plant Disease Resistance Protein
+Protein Type        : Receptor-like Serine/Threonine Kinase
+Organism            : Oryza species
+MSA Tool            : Clustal Omega
+Sequences Compared  : 3
+Alignment Type      : Multiple Sequence Alignment
+Status              : COMPLETED
+
+---
+
+## SEQUENCES USED
+
+1. Q40640
+2. Q1MX30
+3. Q7DMC2
+
+---
+
+## PURPOSE OF THE MSA
+
+Multiple sequence alignment was performed to compare XA21 protein
+sequences and identify conserved amino-acid regions among the
+selected homologous sequences.
+
+The analysis was used to examine:
+
+• Amino-acid sequence conservation
+• Conserved regions
+• Sequence similarity between XA21 homologs
+• Potentially conserved structural regions
+• Sequence variation between homologs
+
+======================================================================
+MSA ANALYSIS RESULT
+===================
+
+The Clustal Omega multiple sequence alignment showed complete
+sequence conservation across the aligned XA21 protein sequences.
+
+Total aligned length:
+1025 amino acids
+
+Conservation:
+100% identical across the aligned region
+
+Conserved region:
+The complete aligned XA21 sequence showed conservation across
+the 1025-amino-acid alignment.
+
+======================================================================
+CONSERVATION SYMBOLS
+====================
+
+* = Identical amino acid in all aligned sequences
+  :  = Conserved substitution
+  .  = Semi-conserved substitution
+
+- = Gap / insertion / deletion
+
+======================================================================
+CONSERVATION SUMMARY
+====================
+
+The XA21 homologs show complete conservation across the reported
+1025-amino-acid aligned region.
+
+Major observations:
+
+✓ Complete sequence conservation
+✓ 100% identity across the aligned region
+✓ No reported variable region in the alignment
+✓ No major sequence divergence reported
+✓ Strong conservation among the selected XA21 homologs
+
+======================================================================
+BIOLOGICAL INTERPRETATION
+=========================
+
+XA21 is a plant disease-resistance protein associated with plant
+immune responses.
+
+The complete conservation observed among the selected sequences
+indicates that the aligned XA21 homologs retain the same amino-acid
+sequence across the reported 1025-amino-acid region.
+
+Highly conserved protein sequences can indicate strong evolutionary
+constraint and preservation of structural or functional properties.
+
+However, sequence conservation alone does not establish the exact
+function of individual residues. Functional interpretation should
+be considered together with UniProt, InterPro/domain analysis,
+BLAST results and structural analysis.
+
+======================================================================
+INTERPRO INFORMATION
+====================
+
+Protein:
+XA21
+
+InterPro annotation:
+Plant receptor-like serine/threonine kinase
+
+InterPro ID:
+IPR051716
+
+The InterPro result supports the classification of XA21 as a
+plant receptor-like serine/threonine kinase.
+
+======================================================================
+MSA AND PROTEIN ANALYSIS CONNECTION
+===================================
+
+The XA21 MSA provides sequence-level evidence of conservation
+among the selected homologs.
+
+This information can be combined with:
+
+1. BLAST
+   → Identifies similar protein sequences.
+
+2. MSA
+   → Compares homologous sequences and identifies conserved regions.
+
+3. InterPro
+   → Provides protein family/domain information.
+
+4. Structure analysis
+   → Can be used
