@@ -1,3 +1,4 @@
+```python
 import streamlit as st
 from pathlib import Path
 import html
@@ -25,7 +26,8 @@ styling.inject_global_css()
 
 st.title("🧬 Protein Detail")
 st.caption(
-    "Detailed molecular information, FASTA sequence, BLAST, MSA and InterPro analysis"
+    "Detailed molecular information, FASTA sequence, BLAST, "
+    "MSA and InterPro analysis"
 )
 
 
@@ -34,7 +36,6 @@ st.caption(
 # ============================================================
 
 protein_id = st.session_state.get("rc_selected_protein_id")
-
 
 if not protein_id:
     st.warning(
@@ -54,7 +55,6 @@ except Exception as e:
     st.error("Unable to load the selected protein.")
     st.exception(e)
     st.stop()
-
 
 if not protein:
     st.error(
@@ -137,8 +137,19 @@ st.info(
 # ============================================================
 
 st.markdown("---")
-
 st.markdown("## 🧬 FASTA Sequence")
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def fetch_fasta(accession):
+    fasta_url = (
+        f"https://rest.uniprot.org/uniprotkb/"
+        f"{accession}.fasta"
+    )
+
+    with urlopen(fasta_url, timeout=10) as response:
+        return response.read().decode("utf-8")
+
 
 with st.expander("▶ View FASTA Sequence"):
 
@@ -158,21 +169,8 @@ with st.expander("▶ View FASTA Sequence"):
 
     else:
 
-        fasta_url = (
-            f"https://rest.uniprot.org/uniprotkb/"
-            f"{accession}.fasta"
-        )
-
         try:
-
-            with urlopen(
-                fasta_url,
-                timeout=10
-            ) as response:
-
-                fasta_sequence = response.read().decode(
-                    "utf-8"
-                )
+            fasta_sequence = fetch_fasta(accession)
 
             st.success(
                 "✅ FASTA sequence retrieved successfully from UniProt."
@@ -184,7 +182,6 @@ with st.expander("▶ View FASTA Sequence"):
             )
 
         except Exception:
-
             st.error(
                 f"Unable to retrieve the FASTA sequence for "
                 f"UniProt accession `{accession}`."
@@ -200,12 +197,8 @@ with st.expander("▶ View FASTA Sequence"):
 # ============================================================
 
 def get_analysis_rows(protein_id_value, analysis_type):
-    """
-    Safely retrieve analysis information.
-    """
 
     try:
-
         rows = data_loader.get_analysis_for_protein(
             protein_id_value,
             analysis_type
@@ -217,7 +210,6 @@ def get_analysis_rows(protein_id_value, analysis_type):
         return rows
 
     except Exception:
-
         return []
 
 
@@ -226,7 +218,6 @@ def get_analysis_rows(protein_id_value, analysis_type):
 # ============================================================
 
 st.markdown("---")
-
 st.markdown("## 🔎 BLAST Analysis")
 
 st.write(
@@ -237,7 +228,6 @@ blast_rows = get_analysis_rows(
     protein_id,
     "BLAST"
 )
-
 
 if blast_rows:
 
@@ -302,11 +292,386 @@ msa_files = {
 
 
 # ============================================================
+# MSA DISPLAY CONFIGURATION
+# ============================================================
+
+msa_region_info = {
+
+    "PROT_XA21": {
+        "title": "Complete conserved region",
+        "range": "1–1025 aa",
+        "description":
+            "XA21 homologs show complete sequence conservation "
+            "across the aligned 1025 amino acids.",
+        "main_limit": 1025,
+    },
+
+    "PROT_PITA": {
+        "title": "Main conserved region",
+        "range": "1–840 aa",
+        "description":
+            "Pi-ta homologs show substantial conservation through "
+            "approximately 840 amino acids. The later C-terminal "
+            "region contains greater sequence divergence and gaps.",
+        "main_limit": 840,
+    },
+
+    "PROT_PBZ1": {
+        "title": "Complete conserved region",
+        "range": "1–158 aa",
+        "description":
+            "PBZ1 homologs show complete sequence conservation "
+            "across the aligned 158 amino acids.",
+        "main_limit": 158,
+    },
+
+    "PROT_OSPR1": {
+        "title": "Aligned conserved region",
+        "range": "Aligned residues",
+        "description":
+            "OsPR1 homologs show complete conservation across "
+            "the corresponding aligned residues, with an "
+            "N-terminal gap in one sequence.",
+        "main_limit": None,
+    },
+
+    "PROT_OSRAB16": {
+        "title": "Conserved and variable regions",
+        "range": "Full alignment",
+        "description":
+            "RAB16 homologs contain several conserved regions "
+            "together with variable and gapped regions.",
+        "main_limit": None,
+    },
+}
+
+
+# ============================================================
+# CLUSTAL MSA PARSER
+# ============================================================
+
+def parse_clustal_blocks(msa_text):
+    """
+    Parse a Clustal Omega alignment into blocks.
+
+    Each block contains:
+        sequence rows
+        conservation row
+
+    The function preserves the original sequence order.
+    """
+
+    lines = msa_text.splitlines()
+
+    blocks = []
+    current_sequences = []
+    current_consensus = None
+
+    for line in lines:
+
+        if not line.strip():
+            if current_sequences:
+
+                blocks.append(
+                    {
+                        "sequences": current_sequences,
+                        "consensus": current_consensus or ""
+                    }
+                )
+
+                current_sequences = []
+                current_consensus = None
+
+            continue
+
+        stripped = line.strip()
+
+        # Skip CLUSTAL heading
+        if stripped.upper().startswith("CLUSTAL"):
+            continue
+
+        # Consensus line:
+        # starts with spaces and contains *, :, .
+        if (
+            line[:1].isspace()
+            and any(symbol in line for symbol in "*:.")
+        ):
+            current_consensus = line.strip()
+
+            if current_sequences:
+
+                blocks.append(
+                    {
+                        "sequences": current_sequences,
+                        "consensus": current_consensus
+                    }
+                )
+
+                current_sequences = []
+                current_consensus = None
+
+            continue
+
+        parts = line.split()
+
+        if len(parts) >= 2:
+
+            sequence_id = parts[0]
+            sequence_part = parts[1]
+
+            # Ignore lines that are not sequence lines
+            if (
+                sequence_id.lower()
+                not in ["clustal", "omega"]
+                and sequence_part
+            ):
+
+                current_sequences.append(
+                    (
+                        sequence_id,
+                        sequence_part
+                    )
+                )
+
+    if current_sequences:
+
+        blocks.append(
+            {
+                "sequences": current_sequences,
+                "consensus": current_consensus or ""
+            }
+        )
+
+    return blocks
+
+
+# ============================================================
+# COLOR ACTUAL AMINO ACIDS USING CONSERVATION LINE
+# ============================================================
+
+def color_sequence(sequence, consensus):
+
+    """
+    Color the actual amino-acid characters according to
+    the Clustal conservation symbols.
+
+    * = identical
+    : = strongly conserved
+    . = weakly conserved
+    """
+
+    output = []
+
+    for index, residue in enumerate(sequence):
+
+        symbol = ""
+
+        if index < len(consensus):
+            symbol = consensus[index]
+
+        safe_residue = html.escape(residue)
+
+        if symbol == "*":
+
+            output.append(
+                '<span class="msa-residue msa-identical">'
+                f"{safe_residue}"
+                "</span>"
+            )
+
+        elif symbol == ":":
+
+            output.append(
+                '<span class="msa-residue msa-strong">'
+                f"{safe_residue}"
+                "</span>"
+            )
+
+        elif symbol == ".":
+
+            output.append(
+                '<span class="msa-residue msa-weak">'
+                f"{safe_residue}"
+                "</span>"
+            )
+
+        else:
+
+            output.append(
+                f'<span class="msa-residue">'
+                f"{safe_residue}"
+                "</span>"
+            )
+
+    return "".join(output)
+
+
+# ============================================================
+# BUILD HTML MSA BLOCK
+# ============================================================
+
+def build_msa_html(blocks):
+
+    html_blocks = []
+
+    for block in blocks:
+
+        sequences = block["sequences"]
+        consensus = block["consensus"]
+
+        if not sequences:
+            continue
+
+        # Determine longest sequence identifier
+        id_width = max(
+            len(sequence_id)
+            for sequence_id, _ in sequences
+        )
+
+        block_html = []
+
+        for sequence_id, sequence in sequences:
+
+            colored_sequence = color_sequence(
+                sequence,
+                consensus
+            )
+
+            block_html.append(
+                '<div class="msa-row">'
+                f'<span class="msa-id" '
+                f'style="width:{id_width + 2}ch;">'
+                f'{html.escape(sequence_id)}'
+                "</span>"
+                f'<span class="msa-sequence">'
+                f'{colored_sequence}'
+                "</span>"
+                "</div>"
+            )
+
+        # Conservation line
+        if consensus:
+
+            safe_consensus = html.escape(
+                consensus
+            )
+
+            colored_consensus = (
+                safe_consensus
+                .replace(
+                    "*",
+                    '<span class="cons-star">*</span>'
+                )
+                .replace(
+                    ":",
+                    '<span class="cons-colon">:</span>'
+                )
+                .replace(
+                    ".",
+                    '<span class="cons-dot">.</span>'
+                )
+            )
+
+            block_html.append(
+                '<div class="msa-consensus-row">'
+                f'<span class="msa-id" '
+                f'style="width:{id_width + 2}ch;">'
+                " "
+                "</span>"
+                f'<span class="msa-consensus">'
+                f'{colored_consensus}'
+                "</span>"
+                "</div>"
+            )
+
+        html_blocks.append(
+            '<div class="msa-block">'
+            + "".join(block_html)
+            + "</div>"
+        )
+
+    return "".join(html_blocks)
+
+
+# ============================================================
+# LIMIT MSA BY ALIGNMENT POSITION
+# ============================================================
+
+def limit_msa_blocks(blocks, max_position):
+
+    """
+    Keep only the alignment blocks whose cumulative sequence
+    position is within max_position.
+
+    This is mainly used for the Pi-ta 1–840 aa conserved region.
+    """
+
+    if max_position is None:
+        return blocks
+
+    limited_blocks = []
+    current_position = 0
+
+    for block in blocks:
+
+        sequences = block["sequences"]
+
+        if not sequences:
+            continue
+
+        block_length = len(
+            sequences[0][1]
+        )
+
+        if current_position >= max_position:
+            break
+
+        remaining = (
+            max_position
+            - current_position
+        )
+
+        if remaining <= 0:
+            break
+
+        if block_length <= remaining:
+
+            limited_blocks.append(block)
+
+        else:
+
+            new_sequences = []
+
+            for sequence_id, sequence in sequences:
+
+                new_sequences.append(
+                    (
+                        sequence_id,
+                        sequence[:remaining]
+                    )
+                )
+
+            new_consensus = block[
+                "consensus"
+            ][:remaining]
+
+            limited_blocks.append(
+                {
+                    "sequences": new_sequences,
+                    "consensus": new_consensus
+                }
+            )
+
+        current_position += block_length
+
+    return limited_blocks
+
+
+# ============================================================
 # MSA ANALYSIS
 # ============================================================
 
 st.markdown("---")
-
 st.markdown("## 🧬 Multiple Sequence Alignment (MSA)")
 
 st.write(
@@ -314,9 +679,7 @@ st.write(
     "selected protein with homologous protein sequences."
 )
 
-
 msa_file = msa_files.get(protein_id)
-
 
 if msa_file:
 
@@ -336,94 +699,387 @@ if msa_file:
 
             if msa_text.strip():
 
-                # Escape HTML characters first
-                msa_html = html.escape(msa_text)
-
-                # Highlight conservation symbols
-                msa_html = msa_html.replace(
-                    "*",
-                    '<span class="msa-star">*</span>'
+                blocks = parse_clustal_blocks(
+                    msa_text
                 )
 
-                msa_html = msa_html.replace(
-                    ":",
-                    '<span class="msa-colon">:</span>'
+                region_info = msa_region_info.get(
+                    protein_id,
+                    {
+                        "title":
+                            "MSA region",
+                        "range":
+                            "Full alignment",
+                        "description":
+                            "Sequence conservation "
+                            "is shown using Clustal "
+                            "conservation symbols.",
+                        "main_limit":
+                            None,
+                    }
                 )
 
-                msa_html = msa_html.replace(
-                    ".",
-                    '<span class="msa-dot">.</span>'
+                # ------------------------------------------------
+                # CONSERVED REGION INFORMATION
+                # ------------------------------------------------
+
+                st.markdown(
+                    "### 🎯 Conserved Region"
+                )
+
+                region_col1, region_col2 = st.columns(
+                    [1, 3]
+                )
+
+                with region_col1:
+
+                    st.metric(
+                        "Region",
+                        region_info["range"]
+                    )
+
+                with region_col2:
+
+                    st.info(
+                        region_info["description"]
+                    )
+
+                # ------------------------------------------------
+                # MSA COLOR EXPLANATION
+                # ------------------------------------------------
+
+                st.markdown(
+                    "### 🎨 Conservation Key"
+                )
+
+                legend1, legend2, legend3, legend4 = (
+                    st.columns(4)
+                )
+
+                with legend1:
+
+                    st.markdown(
+                        '<span class="legend-box '
+                        'legend-identical">'
+                        'A</span> '
+                        '<b>Identical</b> '
+                        '— Clustal `*`',
+                        unsafe_allow_html=True
+                    )
+
+                with legend2:
+
+                    st.markdown(
+                        '<span class="legend-box '
+                        'legend-strong">'
+                        'A</span> '
+                        '<b>Strongly conserved</b> '
+                        '— Clustal `:`',
+                        unsafe_allow_html=True
+                    )
+
+                with legend3:
+
+                    st.markdown(
+                        '<span class="legend-box '
+                        'legend-weak">'
+                        'A</span> '
+                        '<b>Weakly conserved</b> '
+                        '— Clustal `.`',
+                        unsafe_allow_html=True
+                    )
+
+                with legend4:
+
+                    st.markdown(
+                        "⬜ Variable / non-conserved"
+                    )
+
+                # ------------------------------------------------
+                # CSS
+                # ------------------------------------------------
+
+                st.markdown(
+                    """
+                    <style>
+
+                    .msa-wrapper {
+                        width: 100%;
+                        overflow-x: auto;
+                        overflow-y: auto;
+                        max-height: 720px;
+                        border: 1px solid #d6d6d6;
+                        border-radius: 10px;
+                        background: #fafafa;
+                        padding: 18px;
+                        box-sizing: border-box;
+                    }
+
+                    .msa-content {
+                        width: max-content;
+                        min-width: 100%;
+                        font-family:
+                            "Courier New",
+                            Courier,
+                            monospace;
+                        font-size: 13px;
+                        line-height: 1.65;
+                        white-space: nowrap;
+                    }
+
+                    .msa-block {
+                        margin-bottom: 18px;
+                    }
+
+                    .msa-row {
+                        display: flex;
+                        align-items: baseline;
+                        min-height: 22px;
+                    }
+
+                    .msa-id {
+                        display: inline-block;
+                        flex-shrink: 0;
+                        color: #333333;
+                        font-weight: 600;
+                        text-align: left;
+                    }
+
+                    .msa-sequence {
+                        display: inline-block;
+                        letter-spacing: 0;
+                    }
+
+                    .msa-residue {
+                        display: inline-block;
+                        width: 1ch;
+                        text-align: center;
+                        border-radius: 2px;
+                    }
+
+                    .msa-identical {
+                        background-color: #b7f7b7;
+                        color: #075b07;
+                        font-weight: 700;
+                    }
+
+                    .msa-strong {
+                        background-color: #b9dcff;
+                        color: #063f78;
+                        font-weight: 700;
+                    }
+
+                    .msa-weak {
+                        background-color: #ffdca8;
+                        color: #7a4100;
+                        font-weight: 700;
+                    }
+
+                    .msa-consensus-row {
+                        display: flex;
+                        align-items: baseline;
+                        min-height: 22px;
+                        margin-top: 1px;
+                    }
+
+                    .msa-consensus {
+                        display: inline-block;
+                        color: #555555;
+                        font-weight: 700;
+                    }
+
+                    .cons-star {
+                        color: #087408;
+                        font-weight: 900;
+                    }
+
+                    .cons-colon {
+                        color: #075b9e;
+                        font-weight: 900;
+                    }
+
+                    .cons-dot {
+                        color: #b15d00;
+                        font-weight: 900;
+                    }
+
+                    .legend-box {
+                        display: inline-block;
+                        width: 22px;
+                        height: 22px;
+                        line-height: 22px;
+                        text-align: center;
+                        border-radius: 3px;
+                        font-family:
+                            "Courier New",
+                            monospace;
+                        font-weight: 700;
+                    }
+
+                    .legend-identical {
+                        background-color: #b7f7b7;
+                        color: #075b07;
+                    }
+
+                    .legend-strong {
+                        background-color: #b9dcff;
+                        color: #063f78;
+                    }
+
+                    .legend-weak {
+                        background-color: #ffdca8;
+                        color: #7a4100;
+                    }
+
+                    </style>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+                # ------------------------------------------------
+                # MAIN CONSERVED REGION
+                # ------------------------------------------------
+
+                main_blocks = limit_msa_blocks(
+                    blocks,
+                    region_info["main_limit"]
+                )
+
+                main_html = build_msa_html(
+                    main_blocks
                 )
 
                 st.markdown(
                     f"""
-                    <style>
-
-                    .msa-container {{
-                        background-color: #f8f9fa;
-                        border: 1px solid #cccccc;
-                        border-radius: 8px;
-                        padding: 18px;
-                        overflow-x: auto;
-                        overflow-y: auto;
-                        max-height: 700px;
-                        white-space: pre;
-                        font-family: "Courier New", monospace;
-                        font-size: 13px;
-                        line-height: 1.55;
-                    }}
-
-                    .msa-star {{
-                        background-color: #90EE90;
-                        color: #006400;
-                        font-weight: bold;
-                    }}
-
-                    .msa-colon {{
-                        background-color: #ADD8E6;
-                        color: #00008B;
-                        font-weight: bold;
-                    }}
-
-                    .msa-dot {{
-                        background-color: #FFD580;
-                        color: #8B4500;
-                        font-weight: bold;
-                    }}
-
-                    </style>
-
-                    <div class="msa-container">
-                    {msa_html}
+                    <div class="msa-wrapper">
+                        <div class="msa-content">
+                            {main_html}
+                        </div>
                     </div>
                     """,
                     unsafe_allow_html=True
                 )
 
-                st.markdown("### 🎨 Conservation Legend")
+                # ------------------------------------------------
+                # PI-TA C-TERMINAL REGION
+                # ------------------------------------------------
 
-                legend_col1, legend_col2, legend_col3, legend_col4 = (
-                    st.columns(4)
-                )
+                if protein_id == "PROT_PITA":
 
-                with legend_col1:
-                    st.markdown(
-                        "🟩 **`*`** — Identical residue"
+                    conserved_limit = 840
+
+                    divergent_blocks = []
+
+                    current_position = 0
+
+                    for block in blocks:
+
+                        if not block["sequences"]:
+                            continue
+
+                        block_length = len(
+                            block["sequences"][0][1]
+                        )
+
+                        block_start = current_position
+                        block_end = (
+                            current_position
+                            + block_length
+                        )
+
+                        if block_end > conserved_limit:
+
+                            start_index = max(
+                                0,
+                                conserved_limit
+                                - block_start
+                            )
+
+                            new_sequences = []
+
+                            for sequence_id, sequence in (
+                                block["sequences"]
+                            ):
+
+                                new_sequences.append(
+                                    (
+                                        sequence_id,
+                                        sequence[start_index:]
+                                    )
+                                )
+
+                            new_consensus = (
+                                block["consensus"]
+                                [start_index:]
+                            )
+
+                            divergent_blocks.append(
+                                {
+                                    "sequences":
+                                        new_sequences,
+                                    "consensus":
+                                        new_consensus
+                                }
+                            )
+
+                        current_position = block_end
+
+                    if divergent_blocks:
+
+                        st.markdown("---")
+
+                        st.markdown(
+                            "### ⚠️ Pi-ta C-terminal "
+                            "Divergent Region"
+                        )
+
+                        st.warning(
+                            "Positions after approximately "
+                            "840 aa show greater sequence "
+                            "divergence and gaps between the "
+                            "homologous sequences."
+                        )
+
+                        divergent_html = build_msa_html(
+                            divergent_blocks
+                        )
+
+                        with st.expander(
+                            "▶ View C-terminal divergent region"
+                        ):
+
+                            st.markdown(
+                                f"""
+                                <div class="msa-wrapper">
+                                    <div class="msa-content">
+                                        {divergent_html}
+                                    </div>
+                                </div>
+                                """,
+                                unsafe_allow_html=True
+                            )
+
+                # ------------------------------------------------
+                # FULL ALIGNMENT OPTION
+                # ------------------------------------------------
+
+                with st.expander(
+                    "▶ View Full Original Clustal Alignment"
+                ):
+
+                    full_html = build_msa_html(
+                        blocks
                     )
 
-                with legend_col2:
                     st.markdown(
-                        "🟦 **`:`** — Strongly conserved"
-                    )
-
-                with legend_col3:
-                    st.markdown(
-                        "🟧 **`.`** — Weakly conserved"
-                    )
-
-                with legend_col4:
-                    st.markdown(
-                        "⬜ **Blank** — Low/no conservation"
+                        f"""
+                        <div class="msa-wrapper">
+                            <div class="msa-content">
+                                {full_html}
+                            </div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
                     )
 
             else:
@@ -435,7 +1091,7 @@ if msa_file:
         except Exception as e:
 
             st.error(
-                "Unable to read the MSA file."
+                "Unable to read or display the MSA file."
             )
 
             st.exception(e)
@@ -463,14 +1119,12 @@ else:
 # ============================================================
 
 st.markdown("---")
-
 st.markdown("## 📊 MSA Analysis Information")
 
 msa_rows = get_analysis_rows(
     protein_id,
     "MSA"
 )
-
 
 if msa_rows:
 
@@ -496,7 +1150,8 @@ if msa_rows:
     else:
 
         st.info(
-            "MSA information has not been added to the analysis database yet."
+            "MSA information has not been added to the "
+            "analysis database yet."
         )
 
 else:
@@ -511,7 +1166,6 @@ else:
 # ============================================================
 
 st.markdown("---")
-
 st.markdown("## 🧩 InterPro Analysis")
 
 st.write(
@@ -523,7 +1177,6 @@ interpro_rows = get_analysis_rows(
     protein_id,
     "INTERPRO"
 )
-
 
 if interpro_rows:
 
@@ -539,7 +1192,9 @@ if interpro_rows:
 
     if valid_interpro_rows:
 
-        with st.expander("▶ View InterPro Results"):
+        with st.expander(
+            "▶ View InterPro Results"
+        ):
 
             st.dataframe(
                 valid_interpro_rows,
@@ -565,11 +1220,9 @@ else:
 # ============================================================
 
 st.markdown("---")
-
 st.markdown("## 🧪 Protein Analysis Summary")
 
 summary_col1, summary_col2, summary_col3 = st.columns(3)
-
 
 with summary_col1:
 
@@ -610,3 +1263,4 @@ st.markdown("---")
 st.caption(
     "RiceCare AI • Protein molecular information and sequence analysis"
 )
+```
