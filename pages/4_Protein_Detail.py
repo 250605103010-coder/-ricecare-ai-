@@ -24,6 +24,7 @@ styling.inject_global_css()
 # ============================================================
 
 st.title("🧬 Protein Detail")
+
 st.caption(
     "Detailed molecular information, FASTA sequence, BLAST, "
     "MSA and InterPro analysis"
@@ -142,8 +143,7 @@ st.markdown("## 🧬 FASTA Sequence")
 @st.cache_data(ttl=3600, show_spinner=False)
 def fetch_fasta(accession):
     fasta_url = (
-        f"https://rest.uniprot.org/uniprotkb/"
-        f"{accession}.fasta"
+        f"https://rest.uniprot.org/uniprotkb/{accession}.fasta"
     )
 
     with urlopen(fasta_url, timeout=10) as response:
@@ -169,6 +169,7 @@ with st.expander("▶ View FASTA Sequence"):
     else:
 
         try:
+
             fasta_sequence = fetch_fasta(accession)
 
             st.success(
@@ -180,7 +181,7 @@ with st.expander("▶ View FASTA Sequence"):
                 language="text"
             )
 
-        except Exception:
+        except Exception as e:
 
             st.error(
                 f"Unable to retrieve the FASTA sequence for "
@@ -333,7 +334,6 @@ def parse_clustal(msa_text):
 
     for line in msa_text.splitlines():
 
-        # Blank line = end of block
         if not line.strip():
 
             if current_sequences:
@@ -350,19 +350,20 @@ def parse_clustal(msa_text):
 
             continue
 
-        # Skip CLUSTAL heading
         if line.upper().startswith("CLUSTAL"):
 
             continue
 
-        # Consensus line
+        stripped = line.strip()
+
+        # Consensus lines contain only alignment symbols/spaces.
         if (
             line[:1].isspace()
-            and any(symbol in line for symbol in "*:.")
+            and stripped
+            and all(char in "*:. " for char in stripped)
         ):
 
-            current_consensus = line.strip()
-
+            current_consensus = stripped
             continue
 
         parts = line.split()
@@ -379,7 +380,6 @@ def parse_clustal(msa_text):
                 )
             )
 
-    # Add final block
     if current_sequences:
 
         blocks.append(
@@ -402,13 +402,10 @@ def color_sequence(sequence, consensus):
 
     for index, residue in enumerate(sequence):
 
+        symbol = ""
+
         if index < len(consensus):
-
             symbol = consensus[index]
-
-        else:
-
-            symbol = ""
 
         safe_residue = html.escape(residue)
 
@@ -477,9 +474,7 @@ def render_msa_block(block):
             consensus
         )
 
-        safe_id = html.escape(
-            sequence_id
-        )
+        safe_id = html.escape(sequence_id)
 
         rows.append(
             '<div class="msa-row">'
@@ -522,9 +517,7 @@ def render_msa_block(block):
 
             else:
 
-                consensus_html.append(
-                    " "
-                )
+                consensus_html.append(" ")
 
         rows.append(
             '<div class="msa-row consensus-row">'
@@ -541,13 +534,12 @@ def render_msa_block(block):
 
 
 # ============================================================
-# LIMIT ALIGNMENT TO A SPECIFIC REGION
+# LIMIT ALIGNMENT TO SPECIFIC REGION
 # ============================================================
 
 def limit_blocks(blocks, limit):
 
     if limit is None:
-
         return blocks
 
     result = []
@@ -689,7 +681,7 @@ if msa_file:
                     st.markdown(
                         '<span class="legend '
                         'legend-identical">A</span> '
-                        '**Identical (`*` )**',
+                        '**Identical (`*`)**',
                         unsafe_allow_html=True
                     )
 
@@ -698,7 +690,7 @@ if msa_file:
                     st.markdown(
                         '<span class="legend '
                         'legend-strong">A</span> '
-                        '**Strongly conserved (`:` )**',
+                        '**Strongly conserved (`:`)**',
                         unsafe_allow_html=True
                     )
 
@@ -707,7 +699,7 @@ if msa_file:
                     st.markdown(
                         '<span class="legend '
                         'legend-weak">A</span> '
-                        '**Weakly conserved (`.` )**',
+                        '**Weakly conserved (`.`)**',
                         unsafe_allow_html=True
                     )
 
@@ -906,6 +898,7 @@ if msa_file:
                         )
 
                         block_start = current_position
+
                         block_end = (
                             current_position
                             + block_length
@@ -1133,4 +1126,3 @@ st.markdown("---")
 st.caption(
     "RiceCare AI • Protein molecular information and sequence analysis"
 )
-```
