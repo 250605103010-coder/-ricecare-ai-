@@ -1,9 +1,9 @@
-```python
 import streamlit as st
-from utils import styling, data_loader
-from urllib.request import urlopen
 from pathlib import Path
 import html
+from urllib.request import urlopen
+
+from utils import styling, data_loader
 
 
 # ============================================================
@@ -13,10 +13,20 @@ import html
 st.set_page_config(
     page_title="Protein Detail — RiceCare AI",
     page_icon="🧬",
-    layout="wide"
+    layout="wide",
 )
 
 styling.inject_global_css()
+
+
+# ============================================================
+# PAGE TITLE
+# ============================================================
+
+st.title("🧬 Protein Detail")
+st.caption(
+    "Detailed molecular information, FASTA sequence, BLAST, MSA and InterPro analysis"
+)
 
 
 # ============================================================
@@ -25,88 +35,100 @@ styling.inject_global_css()
 
 protein_id = st.session_state.get("rc_selected_protein_id")
 
+
 if not protein_id:
     st.warning(
-        "No protein selected. Go to the Molecular Information page "
-        "and click **View Analysis** on a protein card."
-    )
-    st.stop()
-
-
-protein = data_loader.get_protein_by_id(protein_id)
-
-if not protein:
-    st.error(
-        f"Protein `{protein_id}` not found in "
-        "`data/protein_information.csv`."
+        "No protein has been selected yet. "
+        "Please select a protein from the Molecular Information page."
     )
     st.stop()
 
 
 # ============================================================
-# PROTEIN INFORMATION
+# LOAD PROTEIN INFORMATION
+# ============================================================
+
+try:
+    protein = data_loader.get_protein_by_id(protein_id)
+except Exception as e:
+    st.error("Unable to load the selected protein.")
+    st.exception(e)
+    st.stop()
+
+
+if not protein:
+    st.error(
+        f"No protein information was found for protein ID `{protein_id}`."
+    )
+    st.stop()
+
+
+# ============================================================
+# BASIC PROTEIN INFORMATION
 # ============================================================
 
 st.markdown("## 🧬 Protein Information")
 
+col1, col2 = st.columns(2)
 
-verified = (
-    protein.get("verification_status")
-    == "VERIFIED_SEARCH_RESULT"
-)
+with col1:
+    st.markdown("### Basic Details")
 
-badge = (
-    "✅ Verified via source lookup"
-    if verified
-    else "⚠️ Needs verification on UniProt"
-)
-
-
-st.markdown(
-    f"### {protein.get('protein_name', '')}"
-)
-
-st.caption(badge)
-
-
-c1, c2 = st.columns(2)
-
-
-with c1:
-
-    st.markdown(
-        f"**Gene name:** "
-        f"{protein.get('gene_name', '—')}"
+    st.write(
+        f"**Protein ID:** `{protein.get('protein_id', protein_id)}`"
     )
 
-    st.markdown(
-        f"**UniProt accession:** "
-        f"`{protein.get('uniprot_id', '—')}`"
+    st.write(
+        f"**Protein Name:** "
+        f"{protein.get('protein_name', 'Not available')}"
     )
 
-    st.markdown(
+    st.write(
+        f"**Gene Name:** "
+        f"{protein.get('gene_name', 'Not available')}"
+    )
+
+    st.write(
+        f"**Disease / Condition:** "
+        f"{protein.get('disease_id', 'Not available')}"
+    )
+
+
+with col2:
+    st.markdown("### Biological Details")
+
+    st.write(
+        f"**UniProt ID:** "
+        f"{protein.get('uniprot_id', 'Not available')}"
+    )
+
+    st.write(
         f"**Organism:** "
-        f"{protein.get('organism', '—')}"
+        f"{protein.get('organism', 'Not available')}"
+    )
+
+    st.write(
+        f"**Sequence Length:** "
+        f"{protein.get('sequence_length', 'Not available')}"
+    )
+
+    st.write(
+        f"**Verification Status:** "
+        f"{protein.get('verification_status', 'Not available')}"
     )
 
 
-with c2:
+# ============================================================
+# PROTEIN FUNCTION
+# ============================================================
 
-    st.markdown(
-        f"**Sequence length:** "
-        f"{protein.get('sequence_length', '—')}"
+st.markdown("### 🔬 Protein Function")
+
+st.info(
+    protein.get(
+        "function",
+        "Protein function information is not available."
     )
-
-    st.markdown(
-        f"**Associated condition:** "
-        f"{protein.get('disease_id', '—')}"
-    )
-
-
-st.markdown("**Function**")
-
-st.write(
-    protein.get("function", "—")
 )
 
 
@@ -114,31 +136,32 @@ st.write(
 # FASTA SEQUENCE
 # ============================================================
 
+st.markdown("---")
+
+st.markdown("## 🧬 FASTA Sequence")
+
 with st.expander("▶ View FASTA Sequence"):
 
     accession = str(
         protein.get("uniprot_id", "")
     ).strip()
 
-
     if (
-        accession == "VERIFY_ON_UNIPROT"
-        or not accession
+        not accession
+        or accession == "VERIFY_ON_UNIPROT"
     ):
 
         st.warning(
-            "FASTA sequence is not available because a "
-            "verified UniProt accession is required."
+            "FASTA sequence is not available because a verified "
+            "UniProt accession is required."
         )
-
 
     else:
 
         fasta_url = (
-            f"https://rest.uniprot.org/"
-            f"uniprotkb/{accession}.fasta"
+            f"https://rest.uniprot.org/uniprotkb/"
+            f"{accession}.fasta"
         )
-
 
         try:
 
@@ -147,113 +170,117 @@ with st.expander("▶ View FASTA Sequence"):
                 timeout=10
             ) as response:
 
-                fasta_sequence = (
-                    response
-                    .read()
-                    .decode("utf-8")
+                fasta_sequence = response.read().decode(
+                    "utf-8"
                 )
 
-
             st.success(
-                "✅ FASTA sequence retrieved successfully "
-                "from UniProt."
+                "✅ FASTA sequence retrieved successfully from UniProt."
             )
-
 
             st.code(
                 fasta_sequence,
                 language="text"
             )
 
-
         except Exception:
 
             st.error(
-                f"Unable to retrieve the FASTA sequence "
-                f"for UniProt accession `{accession}`."
+                f"Unable to retrieve the FASTA sequence for "
+                f"UniProt accession `{accession}`."
             )
-
 
             st.info(
-                f"Please verify the UniProt accession "
-                f"`{accession}`."
+                "Please verify that the UniProt accession is correct."
             )
 
 
-st.markdown("---")
+# ============================================================
+# ANALYSIS HELPER
+# ============================================================
+
+def get_analysis_rows(protein_id_value, analysis_type):
+    """
+    Safely retrieve analysis information.
+    """
+
+    try:
+
+        rows = data_loader.get_analysis_for_protein(
+            protein_id_value,
+            analysis_type
+        )
+
+        if rows is None:
+            return []
+
+        return rows
+
+    except Exception:
+
+        return []
 
 
 # ============================================================
 # BLAST ANALYSIS
 # ============================================================
 
-st.markdown("### 🔎 BLAST Analysis")
+st.markdown("---")
 
+st.markdown("## 🔎 BLAST Analysis")
 
 st.write(
     "BLAST was used to identify proteins with similar sequences."
 )
 
-
-blast_rows = data_loader.get_analysis_for_protein(
+blast_rows = get_analysis_rows(
     protein_id,
     "BLAST"
 )
 
 
-if (
-    blast_rows
-    and blast_rows[0].get("status")
-    != "AWAITING_USER_BLAST_RESULTS"
-):
+if blast_rows:
 
-    with st.expander(
-        "▶ View Detailed BLAST Results"
-    ):
+    valid_blast_rows = [
+        row
+        for row in blast_rows
+        if str(row.get("status", "")).strip()
+        not in [
+            "AWAITING_USER_BLAST_RESULTS",
+            "PENDING",
+            ""
+        ]
+    ]
 
-        st.dataframe(
-            blast_rows,
-            use_container_width=True
+    if valid_blast_rows:
+
+        with st.expander("▶ View Detailed BLAST Results"):
+
+            st.dataframe(
+                valid_blast_rows,
+                use_container_width=True,
+                hide_index=True
+            )
+
+    else:
+
+        st.info(
+            "No completed BLAST results have been added yet for "
+            "this protein."
         )
-
 
 else:
 
     st.info(
         "No BLAST results have been added yet for this protein. "
-        "Populate `data/protein_analysis.csv` "
-        "(analysis_type = BLAST) with your actual BLAST output "
-        "to activate this section."
+        "Populate `data/protein_analysis.csv` with the actual "
+        "BLAST result to activate this section."
     )
 
 
-st.markdown("---")
-
-
 # ============================================================
-# MSA ANALYSIS
-# ============================================================
-
-st.markdown(
-    "### 🧬 Multiple Sequence Alignment"
-)
-
-
-st.write(
-    "Multiple Sequence Alignment compares related protein "
-    "sequences and helps identify conserved regions."
-)
-
-
-msa_rows = data_loader.get_analysis_for_protein(
-    protein_id,
-    "MSA"
-)
-
-
-# ------------------------------------------------------------
 # MSA FILE MAPPING
-# ------------------------------------------------------------
+# ============================================================
 
 msa_files = {
 
@@ -274,28 +301,26 @@ msa_files = {
 }
 
 
-msa_file = msa_files.get(protein_id)
+# ============================================================
+# MSA ANALYSIS
+# ============================================================
 
+st.markdown("---")
 
-# ------------------------------------------------------------
-# CHECK MSA RESULT
-# ------------------------------------------------------------
+st.markdown("## 🧬 Multiple Sequence Alignment (MSA)")
 
-msa_completed = (
-    msa_rows
-    and msa_rows[0].get("status")
-    != "AWAITING_USER_MSA_RESULTS"
+st.write(
+    "Multiple sequence alignment was used to compare the "
+    "selected protein with homologous protein sequences."
 )
 
 
-if msa_completed and msa_file:
+msa_file = msa_files.get(protein_id)
+
+
+if msa_file:
 
     msa_path = Path(msa_file)
-
-
-    # --------------------------------------------------------
-    # CHECK FILE EXISTS
-    # --------------------------------------------------------
 
     if msa_path.exists():
 
@@ -309,221 +334,111 @@ if msa_completed and msa_file:
 
                 msa_text = file.read()
 
+            if msa_text.strip():
 
-            # ------------------------------------------------
-            # MSA INFORMATION
-            # ------------------------------------------------
+                # Escape HTML characters first
+                msa_html = html.escape(msa_text)
 
-            st.markdown(
-                "#### 📊 MSA Result"
-            )
+                # Highlight conservation symbols
+                msa_html = msa_html.replace(
+                    "*",
+                    '<span class="msa-star">*</span>'
+                )
 
+                msa_html = msa_html.replace(
+                    ":",
+                    '<span class="msa-colon">:</span>'
+                )
 
-            # Show the information stored in CSV
-            st.dataframe(
-                msa_rows,
-                use_container_width=True
-            )
+                msa_html = msa_html.replace(
+                    ".",
+                    '<span class="msa-dot">.</span>'
+                )
 
+                st.markdown(
+                    f"""
+                    <style>
 
-            st.markdown(
-                "#### 🧬 Complete Sequence Alignment"
-            )
+                    .msa-container {{
+                        background-color: #f8f9fa;
+                        border: 1px solid #cccccc;
+                        border-radius: 8px;
+                        padding: 18px;
+                        overflow-x: auto;
+                        overflow-y: auto;
+                        max-height: 700px;
+                        white-space: pre;
+                        font-family: "Courier New", monospace;
+                        font-size: 13px;
+                        line-height: 1.55;
+                    }}
 
+                    .msa-star {{
+                        background-color: #90EE90;
+                        color: #006400;
+                        font-weight: bold;
+                    }}
 
-            st.caption(
-                "The complete Clustal Omega alignment is shown below. "
-                "Conserved residues are highlighted using the "
-                "conservation symbols *, : and ."
-            )
+                    .msa-colon {{
+                        background-color: #ADD8E6;
+                        color: #00008B;
+                        font-weight: bold;
+                    }}
 
+                    .msa-dot {{
+                        background-color: #FFD580;
+                        color: #8B4500;
+                        font-weight: bold;
+                    }}
 
-            # ------------------------------------------------
-            # CREATE COLOURED MSA HTML
-            # ------------------------------------------------
+                    </style>
 
-            html_lines = []
+                    <div class="msa-container">
+                    {msa_html}
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
 
+                st.markdown("### 🎨 Conservation Legend")
 
-            for line in msa_text.splitlines():
+                legend_col1, legend_col2, legend_col3, legend_col4 = (
+                    st.columns(4)
+                )
 
-                stripped = line.strip()
-
-
-                # --------------------------------------------
-                # CONSERVATION LINE
-                # --------------------------------------------
-
-                if (
-                    stripped
-                    and set(stripped).issubset(
-                        set("*:. ")
-                    )
-                ):
-
-                    coloured_line = ""
-
-
-                    for character in line:
-
-                        if character == "*":
-
-                            coloured_line += (
-                                '<span style="'
-                                'color:#008000;'
-                                'background-color:#e8f5e9;'
-                                'font-weight:bold;'
-                                '">*'
-                                '</span>'
-                            )
-
-
-                        elif character == ":":
-
-                            coloured_line += (
-                                '<span style="'
-                                'color:#1565c0;'
-                                'background-color:#e3f2fd;'
-                                'font-weight:bold;'
-                                '">:'
-                                '</span>'
-                            )
-
-
-                        elif character == ".":
-
-                            coloured_line += (
-                                '<span style="'
-                                'color:#e65100;'
-                                'background-color:#fff3e0;'
-                                'font-weight:bold;'
-                                '">.'
-                                '</span>'
-                            )
-
-
-                        else:
-
-                            coloured_line += " "
-
-
-                    html_lines.append(
-                        coloured_line
+                with legend_col1:
+                    st.markdown(
+                        "🟩 **`*`** — Identical residue"
                     )
 
-
-                # --------------------------------------------
-                # NORMAL SEQUENCE LINE
-                # --------------------------------------------
-
-                else:
-
-                    html_lines.append(
-                        html.escape(line)
+                with legend_col2:
+                    st.markdown(
+                        "🟦 **`:`** — Strongly conserved"
                     )
 
+                with legend_col3:
+                    st.markdown(
+                        "🟧 **`.`** — Weakly conserved"
+                    )
 
-            # ------------------------------------------------
-            # DISPLAY ALIGNMENT
-            # ------------------------------------------------
+                with legend_col4:
+                    st.markdown(
+                        "⬜ **Blank** — Low/no conservation"
+                    )
 
-            msa_html = (
-                '<div style="'
-                'overflow-x:auto;'
-                'overflow-y:auto;'
-                'max-height:650px;'
-                'border:1px solid #cccccc;'
-                'border-radius:10px;'
-                'padding:16px;'
-                'background-color:#fafafa;'
-                '">'
-                '<pre style="'
-                'font-family:monospace;'
-                'font-size:13px;'
-                'line-height:1.6;'
-                'margin:0;'
-                'white-space:pre;'
-                '">'
-                + "\n".join(html_lines)
-                + "</pre>"
-                "</div>"
-            )
+            else:
 
+                st.warning(
+                    f"The MSA file `{msa_file}` is empty."
+                )
 
-            st.markdown(
-                msa_html,
-                unsafe_allow_html=True
-            )
-
-
-            # ------------------------------------------------
-            # CONSERVATION LEGEND
-            # ------------------------------------------------
-
-            st.markdown(
-                "#### 🎨 Conservation Legend"
-            )
-
-
-            st.markdown(
-                """
-                <div style="
-                    display:flex;
-                    gap:20px;
-                    flex-wrap:wrap;
-                    margin-top:5px;
-                    margin-bottom:10px;
-                ">
-
-                    <div>
-                        <span style="
-                            color:#008000;
-                            background-color:#e8f5e9;
-                            font-weight:bold;
-                            padding:3px 7px;
-                            border-radius:4px;
-                        ">*</span>
-                        Identical residue
-                    </div>
-
-                    <div>
-                        <span style="
-                            color:#1565c0;
-                            background-color:#e3f2fd;
-                            font-weight:bold;
-                            padding:3px 7px;
-                            border-radius:4px;
-                        ">:</span>
-                        Strongly conserved substitution
-                    </div>
-
-                    <div>
-                        <span style="
-                            color:#e65100;
-                            background-color:#fff3e0;
-                            font-weight:bold;
-                            padding:3px 7px;
-                            border-radius:4px;
-                        ">.</span>
-                        Weakly conserved substitution
-                    </div>
-
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-
-        except Exception as error:
+        except Exception as e:
 
             st.error(
                 "Unable to read the MSA file."
             )
 
-            st.code(
-                str(error)
-            )
-
+            st.exception(e)
 
     else:
 
@@ -532,52 +447,166 @@ if msa_completed and msa_file:
         )
 
         st.info(
-            "Make sure the MSA file is uploaded to "
-            "your GitHub repository at the correct path."
+            "Create the file inside the `data/msa/` folder "
+            "and add the Clustal Omega alignment."
         )
-
-
-elif msa_completed and not msa_file:
-
-    st.info(
-        "No MSA file has been configured for this protein."
-    )
-
 
 else:
 
     st.info(
-        "No MSA results have been added yet for this protein. "
-        "Populate `data/protein_analysis.csv` "
-        "(analysis_type = MSA) with your actual alignment "
-        "result to activate this section."
+        "No MSA file is configured for this protein."
     )
 
 
+# ============================================================
+# MSA DATABASE ANALYSIS
+# ============================================================
+
 st.markdown("---")
-```
 
-### One important thing, bro
+st.markdown("## 📊 MSA Analysis Information")
 
-For **PBZ1**, your GitHub structure must now be:
+msa_rows = get_analysis_rows(
+    protein_id,
+    "MSA"
+)
 
-```text
-data/
-└── msa/
-    └── pbz1_msa.txt
-```
 
-And the file must contain the **full PBZ1 Clustal Omega alignment** you gave me.
+if msa_rows:
 
-For the other proteins, the code is already prepared for:
+    valid_msa_rows = [
+        row
+        for row in msa_rows
+        if str(row.get("status", "")).strip()
+        not in [
+            "AWAITING_USER_MSA_RESULTS",
+            "PENDING",
+            ""
+        ]
+    ]
 
-```text
-xa21_msa.txt
-pi-ta_msa.txt
-ospr1_msa.txt
-rab16_msa.txt
-```
+    if valid_msa_rows:
 
-So you **do not need to change the Python code again** when you add those MSA files. Just put the complete alignment into the corresponding `.txt` file.
+        st.dataframe(
+            valid_msa_rows,
+            use_container_width=True,
+            hide_index=True
+        )
 
-One small correction from earlier: the alignment you just pasted is **PBZ1**, not Pi-ta. The code above correctly maps it to `PROT_PBZ1`.
+    else:
+
+        st.info(
+            "MSA information has not been added to the analysis database yet."
+        )
+
+else:
+
+    st.info(
+        "No MSA summary information is available."
+    )
+
+
+# ============================================================
+# INTERPRO ANALYSIS
+# ============================================================
+
+st.markdown("---")
+
+st.markdown("## 🧩 InterPro Analysis")
+
+st.write(
+    "InterPro analysis was used to identify protein families, "
+    "domains and functional characteristics."
+)
+
+interpro_rows = get_analysis_rows(
+    protein_id,
+    "INTERPRO"
+)
+
+
+if interpro_rows:
+
+    valid_interpro_rows = [
+        row
+        for row in interpro_rows
+        if str(row.get("status", "")).strip()
+        not in [
+            "PENDING",
+            ""
+        ]
+    ]
+
+    if valid_interpro_rows:
+
+        with st.expander("▶ View InterPro Results"):
+
+            st.dataframe(
+                valid_interpro_rows,
+                use_container_width=True,
+                hide_index=True
+            )
+
+    else:
+
+        st.info(
+            "No completed InterPro results are available yet."
+        )
+
+else:
+
+    st.info(
+        "No InterPro results have been added yet for this protein."
+    )
+
+
+# ============================================================
+# FINAL SUMMARY
+# ============================================================
+
+st.markdown("---")
+
+st.markdown("## 🧪 Protein Analysis Summary")
+
+summary_col1, summary_col2, summary_col3 = st.columns(3)
+
+
+with summary_col1:
+
+    st.markdown("### 🔎 BLAST")
+
+    st.write(
+        "Identifies proteins with similar sequences and "
+        "provides sequence similarity information."
+    )
+
+
+with summary_col2:
+
+    st.markdown("### 🧬 MSA")
+
+    st.write(
+        "Compares homologous sequences and highlights "
+        "conserved and variable regions."
+    )
+
+
+with summary_col3:
+
+    st.markdown("### 🧩 InterPro")
+
+    st.write(
+        "Identifies protein families, domains and "
+        "functional characteristics."
+    )
+
+
+# ============================================================
+# FOOTER
+# ============================================================
+
+st.markdown("---")
+
+st.caption(
+    "RiceCare AI • Protein molecular information and sequence analysis"
+)
