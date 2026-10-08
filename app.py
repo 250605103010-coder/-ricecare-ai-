@@ -1,9 +1,6 @@
-```python
-"""
 RiceCare AI — Home
 Entry point for the multipage Streamlit application.
-Run with: streamlit run app.py
-"""
+Run with:  streamlit run app.py
 
 import streamlit as st
 
@@ -21,48 +18,32 @@ st.set_page_config(
 styling.inject_global_css()
 
 
-# ============================================================
-# SIDEBAR
-# ============================================================
-
 with st.sidebar:
-
     st.markdown("### 🌾 RiceCare AI")
-
     st.caption(
         "AI-Powered Rice Disease & Molecular Information Analyzer"
     )
 
     if is_demo_mode():
-
         st.warning(
             "⚙️ Demo Mode\n\n"
-            "No trained model found."
+            "No trained model found in `/model`. Predictions use a "
+            "placeholder heuristic until a real `.h5`/`.keras` model is added."
         )
-
     else:
-
-        st.success(
-            "✅ Trained model loaded"
-        )
+        st.success("✅ Trained model loaded")
 
 
-# ============================================================
-# HERO SECTION
-# ============================================================
+# ---------------- HERO ----------------
 
 styling.hero(
     "🌾 RiceCare AI",
     "AI-Powered Rice Disease Detection & Molecular Insights",
-    "Upload a rice-leaf image to explore possible disease "
-    "conditions, symptoms, general management information "
-    "and relevant rice defense/stress protein research.",
+    "Upload a rice-leaf image to explore possible disease conditions, "
+    "symptoms, general management information and relevant rice "
+    "defense/stress protein research.",
 )
 
-
-# ============================================================
-# FLOW DIAGRAM
-# ============================================================
 
 styling.flow_diagram(
     [
@@ -74,9 +55,7 @@ styling.flow_diagram(
 )
 
 
-# ============================================================
-# MAIN BUTTONS
-# ============================================================
+# ---------------- MAIN BUTTONS ----------------
 
 col1, col2, col3 = st.columns([1, 1, 1])
 
@@ -85,23 +64,19 @@ with col2:
     a, b = st.columns(2)
 
     with a:
-
         if st.button(
             "📷 Analyze My Plant",
             use_container_width=True,
         ):
-
             st.switch_page(
                 "pages/Analyze_My_Plant.py"
             )
 
     with b:
-
         if st.button(
             "🔬 Explore Rice Research",
             use_container_width=True,
         ):
-
             st.switch_page(
                 "pages/2_Explore_Rice_Diseases.py"
             )
@@ -113,23 +88,14 @@ st.markdown(
 )
 
 
-# ============================================================
-# PROJECT HIGHLIGHTS
-# ============================================================
+# ---------------- HIGHLIGHTS ----------------
 
-st.markdown(
-    "### Project Highlights"
-)
+st.markdown("### Project Highlights")
 
 h1, h2, h3, h4 = st.columns(4)
 
 
-# ------------------------------------------------------------
-# 1. RICE CLASSES
-# ------------------------------------------------------------
-
 with h1:
-
     st.markdown(
         """
         <div class="rc-card">
@@ -144,12 +110,7 @@ with h1:
     )
 
 
-# ------------------------------------------------------------
-# 2. AI DETECTION
-# ------------------------------------------------------------
-
 with h2:
-
     st.markdown(
         """
         <div class="rc-card">
@@ -164,12 +125,7 @@ with h2:
     )
 
 
-# ------------------------------------------------------------
-# 3. PROTEIN RESEARCH
-# ------------------------------------------------------------
-
 with h3:
-
     st.markdown(
         """
         <div class="rc-card">
@@ -184,12 +140,7 @@ with h3:
     )
 
 
-# ------------------------------------------------------------
-# 4. BIOINFORMATICS
-# ------------------------------------------------------------
-
 with h4:
-
     st.markdown(
         """
         <div class="rc-card">
@@ -203,9 +154,7 @@ with h4:
     )
 
 
-# ============================================================
-# FOOTER
-# ============================================================
+# ---------------- FOOTER ----------------
 
 st.markdown(
     "<br/>",
@@ -215,4 +164,3 @@ st.markdown(
 styling.disclaimer()
 
 styling.footer()
-```
