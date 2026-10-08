@@ -101,19 +101,12 @@ with preview_col:
     else:
 
         st.markdown(
-            """
-            <div class="rc-card"
-                 style="text-align:center; padding:3rem 1rem;">
-
-                <h4>📷 Upload Image</h4>
-
-                <p>
-                    Drag &amp; drop a rice leaf photo,
-                    or use your camera above.
-                </p>
-
-            </div>
-            """,
+"""
+<div class="rc-card" style="text-align:center; padding:3rem 1rem;">
+<h4>📷 Upload Image</h4>
+<p>Drag &amp; drop a rice leaf photo, or use your camera above.</p>
+</div>
+""",
             unsafe_allow_html=True,
         )
 
@@ -305,24 +298,12 @@ if "rc_last_scores" in st.session_state:
 
     st.markdown(
         f"""
-        <div class="rc-result-headline">
-
-            <div class="rc-label">
-                Most likely condition
-            </div>
-
-            <div class="rc-disease-name">
-                {disease_info['emoji']}
-                {disease_info['disease_name']}
-            </div>
-
-            <div>
-                Model prediction score:
-                <b>{scores[top_id] * 100:.1f}%</b>
-            </div>
-
-        </div>
-        """,
+<div class="rc-result-headline">
+<div class="rc-label">Most likely condition</div>
+<div class="rc-disease-name">{disease_info['emoji']} {disease_info['disease_name']}</div>
+<div>Model prediction score: <b>{scores[top_id] * 100:.1f}%</b></div>
+</div>
+""",
         unsafe_allow_html=True,
     )
 
@@ -540,24 +521,12 @@ if "rc_last_scores" in st.session_state:
 
 
     st.markdown(
-        """
-        <div class="rc-card">
-
-            <h4>
-                🧬 Explore Molecular Information
-            </h4>
-
-            <p>
-                The AI predicts the visual disease class.
-                The molecular information below is separately
-                researched and describes rice defense/stress-
-                related proteins associated with the biological
-                response to the selected condition — it is not
-                detected from the photograph itself.
-            </p>
-
-        </div>
-        """,
+"""
+<div class="rc-card">
+<h4>🧬 Explore Molecular Information</h4>
+<p>The AI predicts the visual disease class. The molecular information below is separately researched and describes rice defense/stress-related proteins associated with the biological response to the selected condition — it is not detected from the photograph itself.</p>
+</div>
+""",
         unsafe_allow_html=True,
     )
 
