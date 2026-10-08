@@ -1,5 +1,18 @@
-true_label,Healthy,Rice Blast,Brown Spot,Bacterial Leaf Blight
-Healthy,,,,
-Rice Blast,,,,
-Brown Spot,,,,
-Bacterial Leaf Blight,,,,
+from sklearn.metrics import confusion_matrix
+import pandas as pd
+
+# Your model's class numbers (from training, alphabetical):
+# 0 = bacterial_leaf_blight, 1 = brown_spot, 2 = healthy, 3 = leaf_blast
+# The CSV wants this order: Healthy, Rice Blast, Brown Spot, Bacterial Leaf Blight
+csv_order = [2, 3, 1, 0]
+csv_names = ["Healthy", "Rice Blast", "Brown Spot", "Bacterial Leaf Blight"]
+
+# eval_t / eval_p come from the previous cell
+# (test set if you had one, otherwise validation)
+cm = confusion_matrix(eval_t, eval_p, labels=csv_order)
+
+cm_df = pd.DataFrame(cm, columns=csv_names)
+cm_df.insert(0, "true_label", csv_names)
+
+cm_df.to_csv("confusion_matrix.csv", index=False)
+print(cm_df.to_string(index=False))
