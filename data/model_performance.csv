@@ -1,10 +1,58 @@
-metric,value,status
-train_accuracy,,NOT_YET_EVALUATED
-validation_accuracy,,NOT_YET_EVALUATED
-test_accuracy,,NOT_YET_EVALUATED
-precision,,NOT_YET_EVALUATED
-recall,,NOT_YET_EVALUATED
-f1_score,,NOT_YET_EVALUATED
-num_training_images,,NOT_YET_EVALUATED
-num_validation_images,,NOT_YET_EVALUATED
-num_test_images,,NOT_YET_EVALUATED
+import numpy as np
+import pandas as pd
+
+# ---- EDIT THESE NAMES to match your notebook ----
+# model     = your trained model
+# train_ds  = training dataset
+# val_ds    = validation dataset
+# test_ds   = a held-out test dataset, or None if you never made one
+test_ds = None   # change to your test dataset if you have one
+# --------------------------------------------------
+
+def to_class_ids(y):
+    y = np.asarray(y)
+    return y.argmax(axis=1) if y.ndim > 1 else y.astype(int)
+
+def collect(ds):
+    """Predict batch by batch so labels and predictions always line up."""
+    y_true, y_pred = [], []
+    for x, y in ds:
+        p = model.predict_on_batch(x)
+        y_pred.extend(np.argmax(p, axis=1))
+        y_true.extend(to_class_ids(y.numpy()))
+    return np.array(y_true), np.array(y_pred)
+
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support
+
+tr_t, tr_p = collect(train_ds)
+va_t, va_p = collect(val_ds)
+
+# precision/recall/f1 come from the test set if you have one, otherwise validation
+if test_ds is not None:
+    te_t, te_p = collect(test_ds)
+    eval_t, eval_p, status = te_t, te_p, "EVALUATED"
+    test_acc, n_test = accuracy_score(te_t, te_p), len(te_t)
+else:
+    eval_t, eval_p, status = va_t, va_p, "EVALUATED_ON_VALIDATION"
+    test_acc, n_test = "", ""
+
+prec, rec, f1, _ = precision_recall_fscore_support(
+    eval_t, eval_p, average="macro", zero_division=0)
+
+rows = [
+    ("train_accuracy", round(accuracy_score(tr_t, tr_p), 4), "EVALUATED"),
+    ("validation_accuracy", round(accuracy_score(va_t, va_p), 4), "EVALUATED"),
+    ("test_accuracy", round(test_acc, 4) if test_ds is not None else "",
+     "EVALUATED" if test_ds is not None else "NOT_YET_EVALUATED"),
+    ("precision", round(prec, 4), status),
+    ("recall", round(rec, 4), status),
+    ("f1_score", round(f1, 4), status),
+    ("num_training_images", len(tr_t), "EVALUATED"),
+    ("num_validation_images", len(va_t), "EVALUATED"),
+    ("num_test_images", n_test,
+     "EVALUATED" if test_ds is not None else "NOT_YET_EVALUATED"),
+]
+
+df = pd.DataFrame(rows, columns=["metric", "value", "status"])
+df.to_csv("model_performance.csv", index=False)
+print(df.to_string(index=False))
