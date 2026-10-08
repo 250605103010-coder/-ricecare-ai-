@@ -34,17 +34,21 @@ st.caption(
 # MODEL STATUS
 # ============================================================
 
-if model_utils.is_demo_mode():
+model_path = model_utils.find_model_path()
+
+if model_path is None:
+
     st.error(
-        "⚠️ **Trained model not found.** "
-        "Please make sure "
-        "`rice_leaf_disease_efficientnetb0.keras` "
-        "is inside the `models/` folder."
+        "⚠️ **Trained model not found.**\n\n"
+        "Please make sure the following file exists:\n\n"
+        "`models/rice_leaf_disease_efficientnetb0.keras`"
     )
+
 else:
+
     st.success(
         "🤖 **AI Model Ready** — "
-        "Rice leaf disease detection model loaded."
+        "Trained EfficientNetB0 model found."
     )
 
 
@@ -137,7 +141,7 @@ analyze_clicked = st.button(
 
 if analyze_clicked and image_source is not None:
 
-    image = Image.open(image_source)
+    image = Image.open(image_source).convert("RGB")
 
     progress_box = st.empty()
 
@@ -161,27 +165,45 @@ if analyze_clicked and image_source is not None:
     # REAL MODEL PREDICTION
     # --------------------------------------------------------
 
-    scores = model_utils.predict(image)
+    try:
+
+        scores = model_utils.predict(image)
+
+    except Exception as e:
+
+        st.error(
+            "❌ **AI model prediction failed.**"
+        )
+
+        st.code(
+            str(e),
+            language="text"
+        )
+
+        st.info(
+            "Please send me the exact error shown above "
+            "before changing any more files."
+        )
+
+        st.stop()
+
+
+    # --------------------------------------------------------
+    # CHECK SCORES
+    # --------------------------------------------------------
+
+    if not scores:
+
+        st.error(
+            "❌ The AI model returned no prediction scores."
+        )
+
+        st.stop()
 
 
     # --------------------------------------------------------
     # Convert model IDs to existing RiceCare IDs
     # --------------------------------------------------------
-    #
-    # Trained model:
-    #
-    # bacterial_leaf_blight
-    # brown_spot
-    # healthy
-    # leaf_blast
-    #
-    # Existing RiceCare application:
-    #
-    # BACTERIAL_LEAF_BLIGHT
-    # BROWN_SPOT
-    # HEALTHY
-    # RICE_BLAST
-    #
 
     id_mapping = {
         "bacterial_leaf_blight": "BACTERIAL_LEAF_BLIGHT",
@@ -206,12 +228,35 @@ if analyze_clicked and image_source is not None:
 
 
     # --------------------------------------------------------
+    # Check converted scores
+    # --------------------------------------------------------
+
+    if not converted_scores:
+
+        st.error(
+            "❌ Could not convert model prediction "
+            "classes to RiceCare disease IDs."
+        )
+
+        st.stop()
+
+
+    # --------------------------------------------------------
     # Get top prediction
     # --------------------------------------------------------
 
     top_id, top_score = model_utils.get_top_prediction(
         converted_scores
     )
+
+
+    if top_id is None:
+
+        st.error(
+            "❌ Could not determine the top prediction."
+        )
+
+        st.stop()
 
 
     # --------------------------------------------------------
@@ -313,7 +358,7 @@ if "rc_last_scores" in st.session_state:
         st.progress(
             min(
                 max(
-                    scores[disease_id],
+                    float(scores[disease_id]),
                     0.0
                 ),
                 1.0
@@ -391,10 +436,7 @@ if "rc_last_scores" in st.session_state:
 
             st.warning(
                 f"No sample images found yet for "
-                f"**{disease_info['disease_name']}**. "
-                f"Add reference photos to "
-                f"`data/sample_images/"
-                f"{data_loader.DISEASE_ID_TO_FOLDER.get(top_id, '')}/`."
+                f"**{disease_info['disease_name']}**."
             )
 
 
