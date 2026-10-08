@@ -1,18 +1,117 @@
-from sklearn.metrics import confusion_matrix
+# ============================================================
+# RICECARE AI - CONFUSION MATRIX
+# ============================================================
+
+import numpy as np
 import pandas as pd
+from sklearn.metrics import confusion_matrix
 
-# Your model's class numbers (from training, alphabetical):
-# 0 = bacterial_leaf_blight, 1 = brown_spot, 2 = healthy, 3 = leaf_blast
-# The CSV wants this order: Healthy, Rice Blast, Brown Spot, Bacterial Leaf Blight
-csv_order = [2, 3, 1, 0]
-csv_names = ["Healthy", "Rice Blast", "Brown Spot", "Bacterial Leaf Blight"]
+# ------------------------------------------------------------
+# CLASS ORDER - MUST MATCH YOUR TRAINING
+# ------------------------------------------------------------
 
-# eval_t / eval_p come from the previous cell
-# (test set if you had one, otherwise validation)
-cm = confusion_matrix(eval_t, eval_p, labels=csv_order)
+class_names = [
+    "bacterial_leaf_blight",
+    "brown_spot",
+    "healthy",
+    "leaf_blast"
+]
 
-cm_df = pd.DataFrame(cm, columns=csv_names)
-cm_df.insert(0, "true_label", csv_names)
+# ------------------------------------------------------------
+# CHECK TEST DATASET
+# ------------------------------------------------------------
 
-cm_df.to_csv("confusion_matrix.csv", index=False)
-print(cm_df.to_string(index=False))
+print("Test dataset:", test_ds)
+
+# ------------------------------------------------------------
+# GET ACTUAL AND PREDICTED LABELS
+# ------------------------------------------------------------
+
+y_true = []
+y_pred = []
+
+for images, labels in test_ds:
+
+    # Model prediction
+    predictions = model.predict(
+        images,
+        verbose=0
+    )
+
+    predicted_classes = np.argmax(
+        predictions,
+        axis=1
+    )
+
+    # Convert labels to numpy
+    labels = labels.numpy()
+
+    # If labels are one-hot encoded
+    if labels.ndim > 1:
+        actual_classes = np.argmax(
+            labels,
+            axis=1
+        )
+    else:
+        actual_classes = labels.astype(int)
+
+    y_true.extend(actual_classes)
+    y_pred.extend(predicted_classes)
+
+# Convert to arrays
+y_true = np.array(y_true)
+y_pred = np.array(y_pred)
+
+# ------------------------------------------------------------
+# CREATE CONFUSION MATRIX
+# ------------------------------------------------------------
+
+cm = confusion_matrix(
+    y_true,
+    y_pred,
+    labels=np.arange(len(class_names))
+)
+
+# ------------------------------------------------------------
+# CREATE DATAFRAME
+# ------------------------------------------------------------
+
+cm_df = pd.DataFrame(
+    cm,
+    index=class_names,
+    columns=class_names
+)
+
+cm_df.index.name = "actual"
+
+# ------------------------------------------------------------
+# DISPLAY MATRIX
+# ------------------------------------------------------------
+
+print("\n" + "=" * 70)
+print("CONFUSION MATRIX")
+print("=" * 70)
+
+print("\nRows    = Actual class")
+print("Columns = Predicted class\n")
+
+display(cm_df)
+
+# ------------------------------------------------------------
+# SAVE CSV
+# ------------------------------------------------------------
+
+output_path = "/kaggle/working/confusion_matrix.csv"
+
+cm_df.to_csv(
+    output_path
+)
+
+print("\n" + "=" * 70)
+print("DONE")
+print("=" * 70)
+
+print("\nSaved file:")
+print(output_path)
+
+print("\nTest images evaluated:", len(y_true))
