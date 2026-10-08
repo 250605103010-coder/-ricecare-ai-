@@ -1,24 +1,21 @@
 ```python
 """
-RiceCare AI — Analyze My Plant
-AI-powered rice leaf disease detection.
+RiceCare AI — Home
+Entry point for the multipage Streamlit application.
+Run with: streamlit run app.py
 """
 
 import streamlit as st
-from PIL import Image
 
 from utils import styling
-from utils import model_utils
+from utils.model_utils import is_demo_mode
 
-
-# ============================================================
-# PAGE CONFIGURATION
-# ============================================================
 
 st.set_page_config(
-    page_title="Analyze My Plant — RiceCare AI",
+    page_title="RiceCare AI — Home",
     page_icon="🌾",
     layout="wide",
+    initial_sidebar_state="expanded",
 )
 
 styling.inject_global_css()
@@ -29,222 +26,193 @@ styling.inject_global_css()
 # ============================================================
 
 with st.sidebar:
+
     st.markdown("### 🌾 RiceCare AI")
+
     st.caption(
         "AI-Powered Rice Disease & Molecular Information Analyzer"
     )
 
-    if model_utils.is_demo_mode():
-        st.warning("⚙️ Model not found")
+    if is_demo_mode():
+
+        st.warning(
+            "⚙️ Demo Mode\n\n"
+            "No trained model found."
+        )
+
     else:
-        st.success("🤖 AI Model Ready")
+
+        st.success(
+            "✅ Trained model loaded"
+        )
 
 
 # ============================================================
-# PAGE HEADER
+# HERO SECTION
 # ============================================================
+
+styling.hero(
+    "🌾 RiceCare AI",
+    "AI-Powered Rice Disease Detection & Molecular Insights",
+    "Upload a rice-leaf image to explore possible disease "
+    "conditions, symptoms, general management information "
+    "and relevant rice defense/stress protein research.",
+)
+
+
+# ============================================================
+# FLOW DIAGRAM
+# ============================================================
+
+styling.flow_diagram(
+    [
+        "🌾 Rice field",
+        "🍃 Leaf structure",
+        "🧬 Molecular view",
+        "🤖 AI",
+    ]
+)
+
+
+# ============================================================
+# MAIN BUTTONS
+# ============================================================
+
+col1, col2, col3 = st.columns([1, 1, 1])
+
+with col2:
+
+    a, b = st.columns(2)
+
+    with a:
+
+        if st.button(
+            "📷 Analyze My Plant",
+            use_container_width=True,
+        ):
+
+            st.switch_page(
+                "pages/Analyze_My_Plant.py"
+            )
+
+    with b:
+
+        if st.button(
+            "🔬 Explore Rice Research",
+            use_container_width=True,
+        ):
+
+            st.switch_page(
+                "pages/2_Explore_Rice_Diseases.py"
+            )
+
 
 st.markdown(
-    """
-    <div style="text-align: center; padding: 20px 0 25px 0;">
-        <h1>🌾 Analyze My Plant</h1>
-        <p style="font-size: 18px;">
-            Upload or capture a rice leaf image for AI analysis
-        </p>
-    </div>
-    """,
+    "<br/>",
     unsafe_allow_html=True,
 )
 
 
 # ============================================================
-# IMAGE INPUT
+# PROJECT HIGHLIGHTS
 # ============================================================
 
-col1, col2 = st.columns(2)
+st.markdown(
+    "### Project Highlights"
+)
 
-with col1:
-    uploaded_file = st.file_uploader(
-        "📁 Upload Rice Leaf",
-        type=["jpg", "jpeg", "png"],
-        key="rice_leaf_upload",
+h1, h2, h3, h4 = st.columns(4)
+
+
+# ------------------------------------------------------------
+# 1. RICE CLASSES
+# ------------------------------------------------------------
+
+with h1:
+
+    st.markdown(
+        """
+        <div class="rc-card">
+            <h4>🌱 4 Rice Classes</h4>
+            <p>
+                Healthy · Rice Blast · Brown Spot ·
+                Bacterial Leaf Blight
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
-with col2:
-    camera_image = st.camera_input(
-        "📷 Take Photo",
-        key="rice_leaf_camera",
+
+# ------------------------------------------------------------
+# 2. AI DETECTION
+# ------------------------------------------------------------
+
+with h2:
+
+    st.markdown(
+        """
+        <div class="rc-card">
+            <h4>🤖 AI Detection</h4>
+            <p>
+                Image-based classification of rice
+                leaf conditions
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
 
-# ============================================================
-# SELECT IMAGE
-# ============================================================
+# ------------------------------------------------------------
+# 3. PROTEIN RESEARCH
+# ------------------------------------------------------------
 
-image = None
+with h3:
 
-if uploaded_file is not None:
-    image = Image.open(uploaded_file).convert("RGB")
-
-elif camera_image is not None:
-    image = Image.open(camera_image).convert("RGB")
-
-
-# ============================================================
-# SHOW IMAGE + ANALYZE BUTTON
-# ============================================================
-
-if image is not None:
-
-    st.markdown("### 📷 Selected Rice Leaf")
-
-    st.image(
-        image,
-        use_container_width=True,
+    st.markdown(
+        """
+        <div class="rc-card">
+            <h4>🧬 Protein Research</h4>
+            <p>
+                Rice defense &amp; stress-response
+                proteins
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
-    st.markdown("<br>", unsafe_allow_html=True)
 
-    analyze_button = st.button(
-        "🤖 Analyze My Plant",
-        use_container_width=True,
-        type="primary",
+# ------------------------------------------------------------
+# 4. BIOINFORMATICS
+# ------------------------------------------------------------
+
+with h4:
+
+    st.markdown(
+        """
+        <div class="rc-card">
+            <h4>🔬 Bioinformatics</h4>
+            <p>
+                BLAST · MSA · InterPro domain analysis
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
-
-    if analyze_button:
-
-        # ----------------------------------------------------
-        # MODEL PREDICTION
-        # ----------------------------------------------------
-
-        with st.spinner("🔬 Analyzing rice leaf..."):
-
-            try:
-                scores = model_utils.predict(image)
-
-            except Exception as e:
-
-                st.error(
-                    "❌ AI model prediction failed."
-                )
-
-                st.code(
-                    str(e),
-                    language="text",
-                )
-
-                st.stop()
-
-        # ----------------------------------------------------
-        # CHECK RESULT
-        # ----------------------------------------------------
-
-        if not scores:
-            st.error(
-                "❌ No prediction was returned."
-            )
-            st.stop()
-
-        top_id, confidence = (
-            model_utils.get_top_prediction(scores)
-        )
-
-        if top_id is None:
-            st.error(
-                "❌ Unable to determine the prediction."
-            )
-            st.stop()
-
-        # ----------------------------------------------------
-        # SAVE RESULT
-        # ----------------------------------------------------
-
-        st.session_state["prediction_scores"] = scores
-        st.session_state["top_prediction"] = top_id
-        st.session_state["prediction_confidence"] = confidence
-        st.session_state["uploaded_image"] = image
-
-        # ----------------------------------------------------
-        # DISEASE NAMES
-        # ----------------------------------------------------
-
-        disease_names = {
-            "bacterial_leaf_blight":
-                "Bacterial Leaf Blight",
-
-            "brown_spot":
-                "Brown Spot",
-
-            "healthy":
-                "Healthy",
-
-            "leaf_blast":
-                "Rice Blast",
-        }
-
-        disease_name = disease_names.get(
-            top_id,
-            top_id.replace("_", " ").title(),
-        )
-
-        # ----------------------------------------------------
-        # RESULT
-        # ----------------------------------------------------
-
-        st.markdown("---")
-        st.markdown("### 🤖 AI Analysis Result")
-
-        st.success(
-            f"Predicted condition: **{disease_name}**"
-        )
-
-        st.metric(
-            "Model Confidence",
-            f"{confidence * 100:.1f}%",
-        )
-
-        # ----------------------------------------------------
-        # ALL PREDICTION SCORES
-        # ----------------------------------------------------
-
-        st.markdown("### 📊 Prediction Scores")
-
-        display_names = {
-            "bacterial_leaf_blight":
-                "Bacterial Leaf Blight",
-
-            "brown_spot":
-                "Brown Spot",
-
-            "healthy":
-                "Healthy",
-
-            "leaf_blast":
-                "Rice Blast",
-        }
-
-        for class_id, score in scores.items():
-
-            label = display_names.get(
-                class_id,
-                class_id.replace("_", " ").title(),
-            )
-
-            st.write(
-                f"**{label}** — {score * 100:.1f}%"
-            )
-
-            st.progress(
-                float(score)
-            )
 
 
 # ============================================================
 # FOOTER
 # ============================================================
 
-st.markdown("<br>", unsafe_allow_html=True)
+st.markdown(
+    "<br/>",
+    unsafe_allow_html=True,
+)
 
 styling.disclaimer()
+
 styling.footer()
 ```
